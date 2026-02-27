@@ -129,7 +129,7 @@ static const char *main_actions[] = {
 	NULL				/* last action */
 };
 
-G_DEFINE_TYPE (GHexApplicationWindow, ghex_application_window, ADW_TYPE_APPLICATION_WINDOW)
+G_DEFINE_TYPE (GHexApplicationWindow, ghex_application_window, GTK_TYPE_APPLICATION_WINDOW)
 
 /* ---- */
 

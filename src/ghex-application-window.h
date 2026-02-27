@@ -48,7 +48,7 @@ G_BEGIN_DECLS
 #define GHEX_TYPE_APPLICATION_WINDOW (ghex_application_window_get_type ())
 G_DECLARE_FINAL_TYPE (GHexApplicationWindow, ghex_application_window,
 				GHEX, APPLICATION_WINDOW,
-				AdwApplicationWindow)
+				GtkApplicationWindow)
 
 GtkWidget *	ghex_application_window_new (GxkApplication *app);
 void		ghex_application_window_add_hex (GHexApplicationWindow *self,
