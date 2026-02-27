@@ -36,6 +36,8 @@
 
 #include <config.h>
 
+#include <gxk.h>
+
 static GOptionEntry entries[] = {
 	{	.long_name = 	"new-window",
 		.short_name =	'w',
@@ -114,7 +116,7 @@ handle_local_options (GApplication *application,
 }
 
 static void
-startup (AdwApplication *app,
+startup (GxkApplication *app,
 	gpointer user_data)
 {
 	ghex_init_configuration ();
@@ -125,7 +127,7 @@ startup (AdwApplication *app,
 }
 
 static void
-activate (AdwApplication *app,
+activate (GxkApplication *app,
 	gpointer user_data)
 {
 	GtkWindow *window;
@@ -150,7 +152,7 @@ open (GApplication *application,
 {
 	GtkWindow *window;
 
-	activate (ADW_APPLICATION(application), NULL);
+	activate (GXK_APPLICATION(application), NULL);
 	window = gtk_application_get_active_window (GTK_APPLICATION(application));
 
 	for (int i = 0; i < n_files; ++i)
@@ -160,7 +162,7 @@ open (GApplication *application,
 static void
 new_window (GAction *action,
 		GVariant *parameter,
-		AdwApplication *app)
+		GxkApplication *app)
 {
 	GtkWindow *window;
 
@@ -171,7 +173,7 @@ new_window (GAction *action,
 int
 main (int argc, char *argv[])
 {
-	AdwApplication *app;
+	GxkApplication *app;
 	GSimpleAction *new_window_action;
 	char *locale_dir;
 	int status;
@@ -186,7 +188,7 @@ main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 	/* </i18n> */
 
-	app = adw_application_new (APP_ID, G_APPLICATION_HANDLES_OPEN);
+	app = gxk_application_new (APP_ID, G_APPLICATION_HANDLES_OPEN);
 
 	g_application_add_main_option_entries (G_APPLICATION(app), entries);
 

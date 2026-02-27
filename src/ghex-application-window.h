@@ -28,6 +28,7 @@
 #include <gtk/gtk.h>
 #include <adwaita.h>
 #include <glib/gi18n.h>
+#include <gxk.h>
 
 #include "gtkhex.h"
 #include "configuration.h"
@@ -49,7 +50,7 @@ G_DECLARE_FINAL_TYPE (GHexApplicationWindow, ghex_application_window,
 				GHEX, APPLICATION_WINDOW,
 				AdwApplicationWindow)
 
-GtkWidget *	ghex_application_window_new (AdwApplication *app);
+GtkWidget *	ghex_application_window_new (GxkApplication *app);
 void		ghex_application_window_add_hex (GHexApplicationWindow *self,
 				HexWidget *gh);
 void		ghex_application_window_set_hex (GHexApplicationWindow *self,

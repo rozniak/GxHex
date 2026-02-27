@@ -50,7 +50,7 @@ static GFile *tmp_global_gfile_for_nag_screen;
 
 struct _GHexApplicationWindow
 {
-	AdwApplicationWindow parent_instance;
+	GtkApplicationWindow parent_instance;
 
 	HexWidget *gh;
 	HexDialog *dialog;
@@ -821,7 +821,7 @@ tab_view_create_window_cb (AdwTabView *tab_view, gpointer user_data)
 	GHexApplicationWindow *new_appwin;
 
 	new_appwin = GHEX_APPLICATION_WINDOW(ghex_application_window_new (
-				ADW_APPLICATION(gtk_window_get_application (GTK_WINDOW(self)))));
+				GXK_APPLICATION(gtk_window_get_application (GTK_WINDOW(self)))));
 
 	gtk_window_present (GTK_WINDOW(new_appwin));
 	show_hex_tab_view (new_appwin);
@@ -2406,7 +2406,7 @@ ghex_application_window_class_init (GHexApplicationWindowClass *klass)
 }
 
 GtkWidget *
-ghex_application_window_new (AdwApplication *app)
+ghex_application_window_new (GxkApplication *app)
 {
 	return g_object_new (GHEX_TYPE_APPLICATION_WINDOW,
 			"application", app,
