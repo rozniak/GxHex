@@ -905,7 +905,7 @@ update_titlebar (GHexApplicationWindow *self)
              * we hold any further references to gh doesn't seem to work
              * reliably.
              */
-            adw_tab_view_get_n_pages (ADW_TAB_VIEW(self->hex_tab_view)))
+            gtk_notebook_get_n_pages (GTK_NOTEBOOK(self->hex_tab_view)))
     {
         char *basename;
         char *pathname = NULL;
@@ -2562,7 +2562,7 @@ doc_read_ready_cb (GObject *source_object,
     GHexApplicationWindow *self = GHEX_APPLICATION_WINDOW(user_data);
     HexWidget *gh = g_object_get_data (G_OBJECT(self), "target-gh");
     HexDocument *doc = HEX_DOCUMENT(source_object);
-    AdwTabView *tab_view = ADW_TAB_VIEW(self->hex_tab_view);
+    GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
     gboolean result;
     GError *local_error = NULL;
 
@@ -2577,8 +2577,8 @@ doc_read_ready_cb (GObject *source_object,
     }
     else
     {
-        adw_tab_view_close_page (tab_view,
-                adw_tab_view_get_selected_page (tab_view));
+        gtk_notebook_remove_page(tab_view,
+                gtk_notebook_get_current_page (tab_view));
 
         if (local_error)
         {
@@ -2672,15 +2672,15 @@ out:
 HexWidget *
 ghex_application_window_get_hex (GHexApplicationWindow *self)
 {
-    AdwTabPage *page;
+    GtkWidget *page;
 
     g_return_val_if_fail (GHEX_IS_APPLICATION_WINDOW (self), NULL);
 
-    page = adw_tab_view_get_selected_page (ADW_TAB_VIEW(self->hex_tab_view));
+    page = gtk_notebook_get_nth_page (GTK_NOTEBOOK(self->hex_tab_view), gtk_notebook_get_current_page(GTK_NOTEBOOK(self->hex_tab_view)));
 
     if (page)
     {
-        GtkWidget *box = adw_tab_page_get_child (page);
+        GtkWidget *box = page;
         for (GtkWidget *child = gtk_widget_get_first_child (box);
                 child != NULL;
                 child = gtk_widget_get_next_sibling (child))
