@@ -73,7 +73,6 @@ struct _GHexApplicationWindow
 	GtkWidget *copy_special_dialog;
 
 	/* From GtkBuilder: */
-	GtkWidget *headerbar_window_title;
 	GtkWidget *no_doc_label;
 	GtkWidget *child_box;
 	GtkWidget *hex_tab_view;
@@ -918,11 +917,6 @@ update_titlebar (GHexApplicationWindow *self)
 			basename = g_strdup (_(UNTITLED_STRING));
 		}
 
-		adw_window_title_set_title (
-				ADW_WINDOW_TITLE(self->headerbar_window_title), basename);
-		adw_window_title_set_subtitle (
-				ADW_WINDOW_TITLE(self->headerbar_window_title), pathname);
-
 		title = g_strdup_printf ("%s - GHex", basename);
 		gtk_window_set_title (GTK_WINDOW(self), title);
 
@@ -932,10 +926,6 @@ update_titlebar (GHexApplicationWindow *self)
 	}
 	else
 	{
-		adw_window_title_set_title (
-				ADW_WINDOW_TITLE(self->headerbar_window_title), "GHex");
-		adw_window_title_set_subtitle (
-				ADW_WINDOW_TITLE(self->headerbar_window_title), NULL);
 		gtk_window_set_title (GTK_WINDOW(self), "GHex");
 	}
 }
@@ -2381,8 +2371,6 @@ ghex_application_window_class_init (GHexApplicationWindowClass *klass)
 	gtk_widget_class_set_template_from_resource (widget_class,
 					RESOURCE_BASE_PATH "/ghex-application-window.ui");
 
-	gtk_widget_class_bind_template_child (widget_class, GHexApplicationWindow,
-			headerbar_window_title);
 	gtk_widget_class_bind_template_child (widget_class, GHexApplicationWindow,
 			no_doc_label);
 	gtk_widget_class_bind_template_child (widget_class, GHexApplicationWindow,
