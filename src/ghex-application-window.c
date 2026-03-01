@@ -172,9 +172,9 @@ static void ghex_application_window_connect_hex_signals (GHexApplicationWindow *
 /* GHexApplicationWindow -- PRIVATE FUNCTIONS */
 
 static HexWidget *
-get_gh_for_page (GHexApplicationWindow *self, AdwTabPage *page)
+get_gh_for_page (GHexApplicationWindow *self, GtkWidget *page)
 {
-	GtkWidget *box = adw_tab_page_get_child (page);
+	GtkWidget *box = page;
 
 	for (GtkWidget *child = gtk_widget_get_first_child (box);
 			child != NULL;
@@ -188,9 +188,11 @@ get_gh_for_page (GHexApplicationWindow *self, AdwTabPage *page)
 }
 
 static HexWidget *
-get_gh_for_tab (GHexApplicationWindow *self, AdwTabView *tv, int num)
+get_gh_for_tab (GHexApplicationWindow *self, GtkNotebook *tv, int num)
 {
-	return get_gh_for_page (self, adw_tab_view_get_nth_page (tv, num));
+    // RORY: Unlike AdwTabView, GtkNotebook returns the actual child, not a
+    //       'page' widget
+	return get_gh_for_page (self, gtk_notebook_get_nth_page (tv, num));
 }
 
 /* Common macro to apply something to the 'gh' of each tab of the tab view.
@@ -200,10 +202,9 @@ get_gh_for_tab (GHexApplicationWindow *self, AdwTabView *tv, int num)
  */
 #define TAB_VIEW_GH_FOREACH_START											\
 {																			\
-	AdwTabView *tab_view = ADW_TAB_VIEW(self->hex_tab_view);				\
+	GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);				\
 	int i;																	\
-	for (i = adw_tab_view_get_n_pages(tab_view) - 1; i >= 0; --i) {			\
-		AdwTabPage *tab_page = adw_tab_view_get_nth_page (tab_view, i);		\
+	for (i = gtk_notebook_get_n_pages(tab_view) - 1; i >= 0; --i) {			\
 		HexWidget *gh = get_gh_for_tab (self, tab_view, i);
 /* !TAB_VIEW_GH_FOREACH_START */
 
@@ -212,17 +213,17 @@ get_gh_for_tab (GHexApplicationWindow *self, AdwTabView *tv, int num)
 }																			\
 /* !TAB_VIEW_GH_FOREACH_END	*/
 
-static AdwTabPage *
+static gint
 get_tab_for_gh (GHexApplicationWindow *self, HexWidget *target_gh)
 {
 	TAB_VIEW_GH_FOREACH_START
 
 	if (gh == target_gh)
-		return tab_page;
+		return i;
 
 	TAB_VIEW_GH_FOREACH_END
 
-	return NULL;
+	return -1;
 }
 
 static HexInfoBar *
@@ -232,7 +233,7 @@ get_info_bar_for_gh (GHexApplicationWindow *self, HexWidget *target_gh)
 
 	if (gh == target_gh)
 	{
-		GtkWidget *box = adw_tab_page_get_child (tab_page);
+		GtkWidget *box = gtk_notebook_get_nth_page(tab_view, i);
 		for (GtkWidget *child = gtk_widget_get_first_child (box);
 				child != NULL;
 				child = gtk_widget_get_next_sibling (child))
@@ -380,12 +381,13 @@ file_save (GHexApplicationWindow *self)
 			self);
 }
 
+/*
 static void
 close_all_tabs_response_cb (AdwAlertDialog *dialog,
 		const char *response,
 		GHexApplicationWindow *self)
 {
-	/* Regardless of what the user chose, get rid of the dialog. */
+	// Regardless of what the user chose, get rid of the dialog. //
 	adw_dialog_close (ADW_DIALOG (dialog));
 
 	if (g_strcmp0 (response, "discard") == 0)
@@ -417,12 +419,12 @@ close_all_tabs_confirmation_dialog (GHexApplicationWindow *self)
 static void
 check_close_window (GHexApplicationWindow *self)
 {
-	AdwTabView *tab_view = ADW_TAB_VIEW(self->hex_tab_view);
+	GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
 	gboolean unsaved_found = FALSE;
 	int i;
-	const int num_pages = adw_tab_view_get_n_pages (tab_view);
+	const int num_pages = gtk_notebook_get_n_pages (tab_view);
 
-	/* We have more than one tab open: */
+	// We have more than one tab open: //
 	for (i = num_pages - 1; i >= 0; --i)
 	{
 		HexWidget *gh;
@@ -477,8 +479,8 @@ close_doc_response_cb (AdwAlertDialog *dialog,
 		const char *response,
 		GHexApplicationWindow *self)
 {
-	AdwTabView *tab_view = ADW_TAB_VIEW(self->hex_tab_view);
-	AdwTabPage *page = g_object_get_data (G_OBJECT(self), "target-page");
+	GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
+	GtkWidget *page = g_object_get_data (G_OBJECT(self), "target-page");
 
 	if (g_strcmp0 (response, "save") == 0)
 	{
@@ -515,8 +517,8 @@ close_doc_confirmation_dialog (GHexApplicationWindow *self, AdwTabPage *page)
 	basename = common_get_ui_basename (doc);
 
 	if (basename) {
-		/* Translators: %s is the filename that is currently being
-		 * edited. */
+		// Translators: %s is the filename that is currently being
+		// edited. //
 		title = g_strdup_printf (_("%s has been edited since opening."), basename);
 		g_free (basename);
 	}
@@ -547,6 +549,7 @@ close_doc_confirmation_dialog (GHexApplicationWindow *self, AdwTabPage *page)
 
 	adw_dialog_present (ADW_DIALOG(dialog), GTK_WIDGET (self));
 }
+*/
 
 static void
 enable_main_actions (GHexApplicationWindow *self, gboolean enable)
@@ -567,11 +570,11 @@ close_tab_shortcut_cb (GtkWidget *widget,
 		gpointer user_data)
 {
 	GHexApplicationWindow *self = GHEX_APPLICATION_WINDOW(widget);
-	AdwTabPage *page = adw_tab_view_get_selected_page (ADW_TAB_VIEW(self->hex_tab_view));
+//	AdwTabPage *page = adw_tab_view_get_selected_page (ADW_TAB_VIEW(self->hex_tab_view));
 
-	if (page)
-		adw_tab_view_close_page (ADW_TAB_VIEW(self->hex_tab_view), page);
-	else
+//	if (page)
+//		adw_tab_view_close_page (ADW_TAB_VIEW(self->hex_tab_view), page);
+//	else
 		gtk_window_destroy (GTK_WINDOW(self));
 
 	return TRUE;
@@ -670,7 +673,10 @@ update_tabs (GHexApplicationWindow *self)
 	else
 		basename = g_strdup (_(UNTITLED_STRING));
 
-	adw_tab_page_set_title (get_tab_for_gh (self, gh), basename);
+	gtk_notebook_set_tab_label_text (
+            GTK_NOTEBOOK(self->hex_tab_view),
+            gtk_notebook_get_nth_page(GTK_NOTEBOOK(self->hex_tab_view), get_tab_for_gh (self, gh)),
+            basename);
 
 	g_free (basename);
 
@@ -704,7 +710,8 @@ file_loaded (HexDocument *doc, GHexApplicationWindow *self)
 {
 	document_loaded_or_saved_common (self, doc);
 	update_gui_data (self);
-	adw_tab_page_set_icon (get_tab_for_gh (self, ACTIVE_GH), NULL);
+    // RORY: Not doing anything with the icon atm
+//	adw_tab_page_set_icon (get_tab_for_gh (self, ACTIVE_GH), NULL);
 	hex_info_bar_set_shown (get_info_bar_for_gh (self, ACTIVE_GH), FALSE);
 }
 
@@ -726,7 +733,8 @@ document_changed_cb (HexDocument *doc,
 		HexInfoBar *info_bar;
 
 		icon = g_themed_icon_new ("document-modified-symbolic");
-		adw_tab_page_set_icon (get_tab_for_gh (self, gh), icon);
+        // RORY: Not doing anything with the icon atm
+//		adw_tab_page_set_icon (get_tab_for_gh (self, gh), icon);
 		g_object_unref (icon);
 
 		info_bar = get_info_bar_for_gh (self, gh);
@@ -736,6 +744,7 @@ document_changed_cb (HexDocument *doc,
 	TAB_VIEW_GH_FOREACH_END
 }
 
+/**
 static gboolean
 tab_view_close_page_cb (AdwTabView *tab_view,
 		AdwTabPage* page,
@@ -769,11 +778,11 @@ tab_view_page_changed_cb (AdwTabView *tab_view,
 
 	refresh_dialogs (self);
 
-	/* Assess saveability based on new tab we've switched to */
+	// Assess saveability based on new tab we've switched to //
 	doc = hex_widget_get_document (ACTIVE_GH);
 	ghex_application_window_set_can_save (self, assess_can_save (doc));
 
-	/* Bind insert mode between widget and appwin */
+	// Bind insert mode between widget and appwin //
 
 	g_clear_pointer (&self->insert_mode_binding, g_binding_unbind);
 	self->insert_mode_binding = g_object_bind_property (ACTIVE_GH, "insert-mode",
@@ -795,9 +804,9 @@ tab_view_page_attached_cb (AdwTabView *tab_view,
 
 	ghex_application_window_connect_hex_signals (self, get_gh_for_page (self, page));
 
-	/* Let's play this super dumb. If a page is added, that will generally
-	 * mean we don't have to count the pages to see if we have > 0.
-	 */
+	// Let's play this super dumb. If a page is added, that will generally
+	// mean we don't have to count the pages to see if we have > 0.
+	//
 	enable_main_actions (self, TRUE);
 }
 
@@ -827,6 +836,7 @@ tab_view_create_window_cb (AdwTabView *tab_view, gpointer user_data)
 
 	return ADW_TAB_VIEW(new_appwin->hex_tab_view);
 }
+*/
 
 static void
 pane_close_cb (PaneDialog *pane, gpointer user_data)
@@ -1836,8 +1846,9 @@ ghex_application_window_init (GHexApplicationWindow *self)
 
 	/* Setup signals */
 
-	g_signal_connect (self, "close-request",
-			G_CALLBACK(close_request_cb), self);
+    // RORY: Handle closing
+	//g_signal_connect (self, "close-request",
+	//		G_CALLBACK(close_request_cb), self);
 
 	/* Signals - SETTINGS */
 
@@ -1868,12 +1879,16 @@ ghex_application_window_init (GHexApplicationWindow *self)
 	/* Setup tab view */
 
 	/* Don't trample over Ctrl+Home/End & friends. */
+    /** RORY: Disabling this
 	adw_tab_view_remove_shortcuts (ADW_TAB_VIEW(self->hex_tab_view),
 			ADW_TAB_VIEW_SHORTCUT_CONTROL_END |
 			ADW_TAB_VIEW_SHORTCUT_CONTROL_HOME |
 			ADW_TAB_VIEW_SHORTCUT_CONTROL_SHIFT_END |
 			ADW_TAB_VIEW_SHORTCUT_CONTROL_SHIFT_HOME);
+    */
 
+    /**
+     * RORY: Not handling these in notebook for now
 	g_signal_connect (self->hex_tab_view, "notify::selected-page",
 			G_CALLBACK(tab_view_page_changed_cb), self);
 
@@ -1888,6 +1903,7 @@ ghex_application_window_init (GHexApplicationWindow *self)
 
 	g_signal_connect (self->hex_tab_view, "create-window",
 			G_CALLBACK(tab_view_create_window_cb), self);
+    */
 
 	/* Get find_dialog and friends geared up */
 
@@ -2405,11 +2421,11 @@ void
 ghex_application_window_activate_tab (GHexApplicationWindow *self,
 		HexWidget *gh)
 {
-	AdwTabView *tab_view = ADW_TAB_VIEW(self->hex_tab_view);
+	GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
 
 	g_return_if_fail (HEX_IS_WIDGET (gh));
 
-	adw_tab_view_set_selected_page (tab_view, get_tab_for_gh (self, gh));
+	gtk_notebook_set_current_page (tab_view, get_tab_for_gh (self, gh));
 
 	gtk_widget_grab_focus (GTK_WIDGET(gh));
 }
@@ -2478,7 +2494,8 @@ ghex_application_window_add_hex (GHexApplicationWindow *self,
 	gtk_widget_set_vexpand (GTK_WIDGET(gh), TRUE);
 
 	/* Add tab */
-	adw_tab_view_append (ADW_TAB_VIEW(self->hex_tab_view), box);
+    // RORY: No label for the tab!
+	gtk_notebook_append_page (GTK_NOTEBOOK(self->hex_tab_view), box, NULL);
 
 	show_hex_tab_view (self);
 }

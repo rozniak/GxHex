@@ -234,11 +234,6 @@ Or, press Ctrl+W to close the window.</property>
             <child>
               <object class="GtkBox" id="tab_view_box">
                 <property name="orientation">vertical</property>
-                <child>
-                  <object class="AdwTabBar">
-                    <property name="view">hex_tab_view</property>
-                  </object>
-                </child>
                 <child> <!-- type="overlay" -->
                   <object class="GtkRevealer" id="findreplace_revealer">
                     <property name="name">findreplace-revealer</property>
@@ -253,9 +248,7 @@ Or, press Ctrl+W to close the window.</property>
                   </object>
                 </child>
                 <child>
-                  <object class="AdwTabView" id="hex_tab_view">
-                    <property name="hexpand">true</property>
-                    <property name="vexpand">true</property>
+                  <object class="GtkNotebook" id="hex_tab_view">
                   </object>
                 </child>
               </object> <!-- tab_view_box -->
