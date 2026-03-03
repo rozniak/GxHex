@@ -381,39 +381,43 @@ file_save (GHexApplicationWindow *self)
             self);
 }
 
-/*
 static void
-close_all_tabs_response_cb (AdwAlertDialog *dialog,
-        const char *response,
-        GHexApplicationWindow *self)
+close_all_tabs_response_cb (GObject *source_object,
+        GAsyncResult *res,
+        gpointer data)
 {
-    // Regardless of what the user chose, get rid of the dialog. //
-    adw_dialog_close (ADW_DIALOG (dialog));
+    gint response;
 
-    if (g_strcmp0 (response, "discard") == 0)
-        gtk_window_destroy (GTK_WINDOW(self));
+    response = gtk_alert_dialog_choose_finish (GTK_ALERT_DIALOG(source_object),
+            res, NULL);
+
+    if (response == 1)
+        gtk_window_destroy (GTK_WINDOW(data));
 }
 
 static void
 close_all_tabs_confirmation_dialog (GHexApplicationWindow *self)
 {
-    AdwDialog *dialog = adw_alert_dialog_new (_("Save Changes?"), NULL);
+    const gchar* button_labels[] = {
+        _("_Cancel"),
+        _("_Discard"),
+        NULL
+    };
 
-    adw_alert_dialog_set_body (ADW_ALERT_DIALOG(dialog),
+    GtkAlertDialog *dialog = gtk_alert_dialog_new ("%s", _("Save Changes?"));
+
+    gtk_alert_dialog_set_message (dialog,
             _("Open documents contain unsaved changes.\n"
                "Changes which are not saved will be permanently lost."));
-    adw_alert_dialog_add_responses (ADW_ALERT_DIALOG(dialog),
-            "cancel", _("_Cancel"),
-            "discard", _("_Discard"),
-            NULL);
-    adw_alert_dialog_set_response_appearance (ADW_ALERT_DIALOG(dialog),
-            "discard",
-            ADW_RESPONSE_DESTRUCTIVE);
-    adw_alert_dialog_set_default_response (ADW_ALERT_DIALOG(dialog), "cancel");
+    gtk_alert_dialog_set_buttons (dialog, button_labels);
+    gtk_alert_dialog_set_cancel_button (dialog, 0);
+    gtk_alert_dialog_set_cancel_button (dialog, 1);
 
-    g_signal_connect (dialog, "response", G_CALLBACK(close_all_tabs_response_cb), self);
-
-    adw_dialog_present (dialog, GTK_WIDGET(self));
+    gtk_alert_dialog_choose (dialog,
+            GTK_WINDOW(self),
+            NULL,
+            close_all_tabs_response_cb,
+            self);
 }
 
 static void
@@ -455,6 +459,7 @@ close_request_cb (GtkWindow *window,
     return GDK_EVENT_STOP;
 }
 
+/*
 static void
 close_page_finish_helper (GHexApplicationWindow *self, AdwTabView *tab_view, AdwTabPage *page, gboolean confirm)
 {
@@ -1853,9 +1858,8 @@ ghex_application_window_init (GHexApplicationWindow *self)
 
     /* Setup signals */
 
-    // RORY: Handle closing
-    //g_signal_connect (self, "close-request",
-    //        G_CALLBACK(close_request_cb), self);
+    g_signal_connect (self, "close-request",
+            G_CALLBACK(close_request_cb), self);
 
     /* Signals - SETTINGS */
 
