@@ -157,7 +157,7 @@ static void update_status_message (GHexApplicationWindow *self);
 static void update_gui_data (GHexApplicationWindow *self);
 static gboolean assess_can_save (HexDocument *doc);
 static void close_doc_confirmation_dialog (GHexApplicationWindow *self,
-        AdwTabPage *page);
+        gint page_num);
 static void show_no_file_loaded_label (GHexApplicationWindow *self);
 
 static void doc_read_ready_cb (GObject *source_object, GAsyncResult *res,
@@ -398,7 +398,7 @@ close_all_tabs_response_cb (GObject *source_object,
 static void
 close_all_tabs_confirmation_dialog (GHexApplicationWindow *self)
 {
-    const gchar* button_labels[] = {
+    const gchar* buttons[] = {
         _("_Cancel"),
         _("_Discard"),
         NULL
@@ -409,9 +409,8 @@ close_all_tabs_confirmation_dialog (GHexApplicationWindow *self)
     gtk_alert_dialog_set_message (dialog,
             _("Open documents contain unsaved changes.\n"
                "Changes which are not saved will be permanently lost."));
-    gtk_alert_dialog_set_buttons (dialog, button_labels);
+    gtk_alert_dialog_set_buttons (dialog, buttons);
     gtk_alert_dialog_set_cancel_button (dialog, 0);
-    gtk_alert_dialog_set_cancel_button (dialog, 1);
 
     gtk_alert_dialog_choose (dialog,
             GTK_WINDOW(self),
@@ -459,62 +458,78 @@ close_request_cb (GtkWindow *window,
     return GDK_EVENT_STOP;
 }
 
-/*
 static void
-close_page_finish_helper (GHexApplicationWindow *self, AdwTabView *tab_view, AdwTabPage *page, gboolean confirm)
+close_page_finish_helper (GHexApplicationWindow *self, GtkNotebook *tab_view, gint page_num, gboolean confirm)
 {
-    if (confirm && adw_tab_view_get_n_pages (tab_view) == 1)
+    if (confirm)
     {
-        enable_main_actions (self, FALSE);
-        ghex_application_window_set_show_find (self, FALSE);
-        ghex_application_window_set_show_replace (self, FALSE);
-        ghex_application_window_set_show_jump (self, FALSE);
-        ghex_application_window_set_show_mark (self, FALSE);
-        ghex_application_window_set_show_chartable (self, FALSE);
-        ghex_application_window_set_show_converter (self, FALSE);
+        if (gtk_notebook_get_n_pages (tab_view) == 1)
+        {
+            enable_main_actions (self, FALSE);
+            ghex_application_window_set_show_find (self, FALSE);
+            ghex_application_window_set_show_replace (self, FALSE);
+            ghex_application_window_set_show_jump (self, FALSE);
+            ghex_application_window_set_show_mark (self, FALSE);
+            ghex_application_window_set_show_chartable (self, FALSE);
+            ghex_application_window_set_show_converter (self, FALSE);
 
-        show_no_file_loaded_label (self);
+            show_no_file_loaded_label (self);
+        }
+
+        gtk_notebook_remove_page (tab_view, page_num);
     }
-    adw_tab_view_close_page_finish (tab_view, page, confirm);
     update_gui_data (self);
 }
 
 static void
-close_doc_response_cb (AdwAlertDialog *dialog,
-        const char *response,
-        GHexApplicationWindow *self)
+close_doc_response_cb (GObject *source_object,
+        GAsyncResult *res,
+        gpointer user_data)
 {
+    GtkAlertDialog *dialog = GTK_ALERT_DIALOG(source_object);
+    GHexApplicationWindow *self = GHEX_APPLICATION_WINDOW(user_data);
+    gint response = gtk_alert_dialog_choose_finish (dialog, res, NULL);
+
     GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
-    GtkWidget *page = g_object_get_data (G_OBJECT(self), "target-page");
+    gint page_num = GPOINTER_TO_INT(g_object_get_data (G_OBJECT(self),
+                "target-page"));
 
-    if (g_strcmp0 (response, "save") == 0)
+    switch (response)
     {
-        file_save (self);
-        close_page_finish_helper (self, tab_view, page, TRUE);
-    }
-    else if (g_strcmp0 (response, "discard") == 0)
-    {
-        close_page_finish_helper (self, tab_view, page, TRUE);
-    }
-    else
-    {
-        close_page_finish_helper (self, tab_view, page, FALSE);
-    }
+        case 0: // Cancel
+            close_page_finish_helper (self, tab_view, page_num, FALSE);
+            break;
 
-    adw_dialog_close (ADW_DIALOG (dialog));
+        case 1: // Discard
+            close_page_finish_helper (self, tab_view, page_num, TRUE);
+            break;
+
+        case 2: // Save
+            file_save (self);
+            close_page_finish_helper (self, tab_view, page_num, TRUE);
+            break;
+    }
 
     if (ACTIVE_GH)
         gtk_widget_grab_focus (GTK_WIDGET (ACTIVE_GH));
 }
 
 static void
-close_doc_confirmation_dialog (GHexApplicationWindow *self, AdwTabPage *page)
+close_doc_confirmation_dialog (GHexApplicationWindow *self, gint page_num)
 {
-    AdwDialog *dialog;
+    const gchar *buttons[] = {
+        _("_Cancel"),
+        _("_Discard"),
+        _("_Save"),
+        NULL
+    };
+
+    GtkAlertDialog *dialog;
     HexDocument *doc;
     char *basename = NULL;
     char *title = NULL;
-    HexWidget *gh = get_gh_for_page (self, page);
+    HexWidget *gh = get_gh_for_tab (self, GTK_NOTEBOOK(self->hex_tab_view),
+            page_num);
 
     doc = hex_widget_get_document (gh);
     g_return_if_fail (HEX_IS_DOCUMENT (doc));
@@ -531,30 +546,41 @@ close_doc_confirmation_dialog (GHexApplicationWindow *self, AdwTabPage *page)
         title = g_strdup (_("The buffer has been edited since opening."));
     }
 
-    dialog = adw_alert_dialog_new (title, NULL);
+    dialog = gtk_alert_dialog_new ("%s", title);
     g_free (title);
 
-    adw_alert_dialog_set_body (ADW_ALERT_DIALOG(dialog),
+    gtk_alert_dialog_set_message (dialog,
             _("Would you like to save your changes?"));
-    adw_alert_dialog_add_responses (ADW_ALERT_DIALOG(dialog),
-            "cancel", _("_Cancel"),
-            "discard", _("_Discard"),
-            "save", _("_Save"),
-            NULL);
-    adw_alert_dialog_set_default_response (ADW_ALERT_DIALOG(dialog), "cancel");
-    adw_alert_dialog_set_response_appearance (ADW_ALERT_DIALOG(dialog),
-            "discard",
-            ADW_RESPONSE_DESTRUCTIVE);
-    adw_alert_dialog_set_response_appearance (ADW_ALERT_DIALOG(dialog),
-            "save",
-            ADW_RESPONSE_SUGGESTED);
-    g_signal_connect (dialog, "response", G_CALLBACK(close_doc_response_cb), self);
+    gtk_alert_dialog_set_buttons (dialog, buttons);
+    gtk_alert_dialog_set_default_button (dialog, 0);
 
-    g_object_set_data (G_OBJECT(self), "target-page", page);
+    g_object_set_data (G_OBJECT(self), "target-page",
+            GINT_TO_POINTER(page_num));
 
-    adw_dialog_present (ADW_DIALOG(dialog), GTK_WIDGET (self));
+    gtk_alert_dialog_choose (dialog,
+            GTK_WINDOW(self),
+            NULL,
+            close_doc_response_cb,
+            self);
 }
-*/
+
+static void
+close_tab (GHexApplicationWindow *self,
+        gint page_num)
+{
+    HexDocument *doc;
+    GtkNotebook *tab_view = GTK_NOTEBOOK(self->hex_tab_view);
+    HexWidget *gh;
+
+    gh = get_gh_for_tab (self, tab_view, page_num);
+    doc = hex_widget_get_document(gh);
+
+    if (hex_document_has_changed (doc)) {
+        close_doc_confirmation_dialog (self, page_num);
+    } else {
+        close_page_finish_helper (self, tab_view, page_num, TRUE);
+    }
+}
 
 static void
 enable_main_actions (GHexApplicationWindow *self, gboolean enable)
@@ -575,11 +601,11 @@ close_tab_shortcut_cb (GtkWidget *widget,
         gpointer user_data)
 {
     GHexApplicationWindow *self = GHEX_APPLICATION_WINDOW(widget);
-//    AdwTabPage *page = adw_tab_view_get_selected_page (ADW_TAB_VIEW(self->hex_tab_view));
+    gint page_num = gtk_notebook_get_current_page (GTK_NOTEBOOK(self->hex_tab_view));
 
-//    if (page)
-//        adw_tab_view_close_page (ADW_TAB_VIEW(self->hex_tab_view), page);
-//    else
+    if (page_num >= 0)
+        close_tab (self, page_num);
+    else
         gtk_window_destroy (GTK_WINDOW(self));
 
     return TRUE;
@@ -754,6 +780,19 @@ document_changed_cb (HexDocument *doc,
     }
 
     TAB_VIEW_GH_FOREACH_END
+}
+
+static void
+tab_close_button_clicked_cb(GtkButton *close_button,
+        gpointer user_data)
+{
+    GHexApplicationWindow *self;
+    HexWidget *gh = HEX_WIDGET(user_data);
+
+    self = GHEX_APPLICATION_WINDOW(gtk_widget_get_ancestor(GTK_WIDGET(gh),
+                GTK_TYPE_APPLICATION_WINDOW));
+
+    close_tab (self, get_tab_for_gh (self, gh));
 }
 
 /**
@@ -2512,6 +2551,11 @@ ghex_application_window_add_hex (GHexApplicationWindow *self,
     label = gtk_label_new(NULL);
     label_close_button = gtk_button_new_from_icon_name("window-close");
 
+    g_signal_connect(label_close_button,
+            "clicked",
+            G_CALLBACK(tab_close_button_clicked_cb),
+            gh);
+
     gtk_box_append(GTK_BOX(label_box), label);
     gtk_box_append(GTK_BOX(label_box), label_close_button);
 
@@ -2697,7 +2741,9 @@ ghex_application_window_get_hex (GHexApplicationWindow *self)
 
     g_return_val_if_fail (GHEX_IS_APPLICATION_WINDOW (self), NULL);
 
-    page = gtk_notebook_get_nth_page (GTK_NOTEBOOK(self->hex_tab_view), gtk_notebook_get_current_page(GTK_NOTEBOOK(self->hex_tab_view)));
+    page = gtk_notebook_get_nth_page (GTK_NOTEBOOK(self->hex_tab_view),
+            gtk_notebook_get_current_page(GTK_NOTEBOOK(self->hex_tab_view))
+            );
 
     if (page)
     {
