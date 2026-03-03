@@ -658,6 +658,7 @@ update_tabs (GHexApplicationWindow *self)
 {
     HexDocument *doc = NULL;
     GFile *gfile = NULL;
+    GtkWidget *label_box = NULL;
 
     TAB_VIEW_GH_FOREACH_START
 
@@ -673,9 +674,15 @@ update_tabs (GHexApplicationWindow *self)
     else
         basename = g_strdup (_(UNTITLED_STRING));
 
-    gtk_notebook_set_tab_label_text (
+    /* The label sits within a box */
+    label_box =
+        gtk_notebook_get_tab_label(
             GTK_NOTEBOOK(self->hex_tab_view),
-            gtk_notebook_get_nth_page(GTK_NOTEBOOK(self->hex_tab_view), get_tab_for_gh (self, gh)),
+            gtk_notebook_get_nth_page (
+                GTK_NOTEBOOK(self->hex_tab_view), get_tab_for_gh (self, gh)
+                ));
+
+    gtk_label_set_text (GTK_LABEL(gtk_widget_get_first_child (label_box)),
             basename);
 
     g_free (basename);
@@ -2467,6 +2474,9 @@ ghex_application_window_add_hex (GHexApplicationWindow *self,
     GtkWidget *box;
     GtkWidget *tab;
     HexDocument *doc;
+    GtkWidget *label_box;
+    GtkWidget *label;
+    GtkWidget *label_close_button;
 
     g_return_if_fail (HEX_IS_WIDGET(gh));
 
@@ -2493,9 +2503,16 @@ ghex_application_window_add_hex (GHexApplicationWindow *self,
     gtk_widget_set_hexpand (GTK_WIDGET(gh), TRUE);
     gtk_widget_set_vexpand (GTK_WIDGET(gh), TRUE);
 
+    /* Create tab label */
+    label_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    label = gtk_label_new(NULL);
+    label_close_button = gtk_button_new_from_icon_name("window-close");
+
+    gtk_box_append(GTK_BOX(label_box), label);
+    gtk_box_append(GTK_BOX(label_box), label_close_button);
+
     /* Add tab */
-    // RORY: No label for the tab!
-    gtk_notebook_append_page (GTK_NOTEBOOK(self->hex_tab_view), box, NULL);
+    gtk_notebook_append_page (GTK_NOTEBOOK(self->hex_tab_view), box, label_box);
 
     show_hex_tab_view (self);
 }
